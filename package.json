@@ -15,7 +15,7 @@
     "build:dxt": "npm run build && node --input-type=module --eval \"import('@angusdavis2/mcp-framework').then(f => f.buildDxtAuto())\""
   },
   "dependencies": {
-    "@angusdavis2/mcp-framework": "^2.0.1",
+    "@angusdavis2/mcp-framework": "^2.0.2",
     "@modelcontextprotocol/sdk": "^1.15.1",
     "agents": "^0.0.100",
     "axios": "^1.6.0",

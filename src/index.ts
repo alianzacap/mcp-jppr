@@ -13,7 +13,7 @@ import {
 } from './jppr-tools.js';
 
 // Create MCP server configuration
-const serverConfig: McpServerConfig = {
+export const serverConfig: McpServerConfig = {
   name: 'mcp-jppr',
   version: '1.0.0',
   tools: [
