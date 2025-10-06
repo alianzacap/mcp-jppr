@@ -6,6 +6,9 @@ npm-debug.log*
 dist/
 dist-dxt/
 
+# Wrangler
+.wrangler/
+
 # DXT files (build artifacts)
 *.dxt
 

@@ -1,68 +1,116 @@
-import { McpAgent } from "agents/mcp";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { type McpServerConfig } from '@angusdavis2/mcp-framework';
+import { type McpServerConfig, createToolEntry } from '@angusdavis2/mcp-framework';
+import { McpDurableObject, type CloudflareEnv } from '@angusdavis2/mcp-framework/cloudflare';
 import {
   searchPropertiesDefinition,
   searchPropertiesHandler,
   getPropertyDetailsDefinition,
   getPropertyDetailsHandler
 } from './jppr-tools.js';
-import { createToolEntry } from '@angusdavis2/mcp-framework';
 
-// Import the Cloudflare adapter functions from the main framework
-import { 
-  registerFrameworkTools, 
-  createCloudflareWorkerApp,
-  type CloudflareEnv,
-  type CloudflareWorkerProps 
-} from '@angusdavis2/mcp-framework';
+// Cloudflare Workers types
+interface ExecutionContext {
+  waitUntil(promise: Promise<any>): void;
+  passThroughOnException(): void;
+}
 
-// Reuse the same server configuration as the main mcp-jppr project
-const serverConfig: McpServerConfig = {
-  name: 'mcp-jppr-cloudflare',
-  version: '1.0.0',
-  tools: [
-    createToolEntry(searchPropertiesDefinition, searchPropertiesHandler),
-    createToolEntry(getPropertyDetailsDefinition, getPropertyDetailsHandler)
-  ]
-};
-
-// Create MCP Agent class for JPPR tools
-class JPPRMcpAgent extends McpAgent<CloudflareEnv, null, CloudflareWorkerProps> {
-  server = new McpServer({
-    name: serverConfig.name,
-    version: serverConfig.version,
-  });
-
+// JPPR MCP Durable Object Agent
+export class JPPRMcpAgent extends McpDurableObject {
   async init() {
-    // Register all JPPR framework tools
-    registerFrameworkTools(this.server, serverConfig);
-    
-    // Optional: Add worker-specific tools
-    this.server.tool(
-      "worker_info",
-      {},
-      async () => ({
-        content: [
-          {
-            type: "text",
-            text: `JPPR MCP Server running on Cloudflare Workers\nTools: search_properties, get_property_details`,
-          },
-        ],
-      })
-    );
+    // Optional: Initialize any state here
+  }
+
+  getServerConfig(): McpServerConfig {
+    return {
+      name: 'mcp-jppr-cloudflare',
+      version: '1.0.0',
+      tools: [
+        createToolEntry(searchPropertiesDefinition, searchPropertiesHandler),
+        createToolEntry(getPropertyDetailsDefinition, getPropertyDetailsHandler)
+      ]
+    };
   }
 }
 
-// Create the Cloudflare Worker app with authentication
-const app: any = createCloudflareWorkerApp(JPPRMcpAgent, {
-  serviceName: 'mcp-jppr-cloudflare',
-  version: '1.0.0',
-  requireAuth: true,
-  healthEndpoint: '/health',
-  mcpEndpoint: '/sse'
-});
+// Bearer token authentication function
+function authenticateBearerToken(request: Request, env: CloudflareEnv): Response | null {
+  const authHeader = request.headers.get('authorization');
 
-// Export for Cloudflare Workers
-export default app;
-export { JPPRMcpAgent }; 
+  if (!authHeader) {
+    return new Response(JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32001,
+        message: 'Unauthorized: Missing Authorization header',
+      },
+      id: null,
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return new Response(JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32001,
+        message: 'Unauthorized: Invalid Authorization header format. Expected "Bearer <token>"',
+      },
+      id: null,
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const token = parts[1];
+  const expectedToken = env.MCP_BEARER_TOKEN;
+
+  if (!expectedToken || token !== expectedToken) {
+    return new Response(JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32001,
+        message: 'Unauthorized: Invalid Bearer token',
+      },
+      id: null,
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  return null; // Authentication successful
+}
+
+// Cloudflare Worker default export
+export default {
+  async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext) {
+    const url = new URL(request.url);
+
+    // Health check endpoint (no authentication required)
+    if (url.pathname === "/health") {
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        service: 'mcp-jppr-cloudflare',
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        tools: ['search_properties', 'get_property_details']
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // MCP endpoint
+    if (url.pathname === "/mcp") {
+      // Authenticate Bearer token
+      const authError = authenticateBearerToken(request, env);
+      if (authError) return authError;
+
+      return JPPRMcpAgent.serve("/mcp").fetch(request, env, ctx);
+    }
+
+    return new Response("Not found", { status: 404 });
+  },
+};

@@ -1,0 +1,32 @@
+{
+  "name": "mcp-jppr",
+  "main": "src/cloudflare-worker.ts",
+  "compatibility_date": "2025-03-26",
+  
+  // Enable Node.js core module shims required by the `agents` package
+  "compatibility_flags": ["nodejs_compat"],
+  
+  // Environment variables
+  "vars": {
+    "MCP_BEARER_TOKEN": "your-bearer-token-here"
+  },
+  
+  // Durable Object binding
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_OBJECT",
+        "class_name": "JPPRMcpAgent"
+      }
+    ]
+  },
+  
+  // First-time migration to create SQLite-backed DO namespace
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["JPPRMcpAgent"]
+    }
+  ]
+}
+
