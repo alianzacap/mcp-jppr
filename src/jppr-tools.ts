@@ -3,7 +3,7 @@ import {
   type McpToolHandler,
   createSuccessResult,
   createErrorResult
-} from '@angusdavis2/mcp-framework';
+} from '@alianzacap/mcp-framework';
 import { z } from 'zod';
 import { MiprApiClient, type PropertySearchParams } from './mipr-api-client.js';
 

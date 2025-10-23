@@ -1,4 +1,4 @@
-import { startStdioServer } from '@angusdavis2/mcp-framework';
+import { startStdioServer } from '@alianzacap/mcp-framework';
 import { server } from './index.js';
 
 console.error('🚀 Starting MCP JPPR Server (STDIO mode)');

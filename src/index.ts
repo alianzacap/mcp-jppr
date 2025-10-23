@@ -2,7 +2,7 @@ import {
   createMcpServer, 
   createToolEntry, 
   type McpServerConfig 
-} from '@angusdavis2/mcp-framework';
+} from '@alianzacap/mcp-framework';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import {

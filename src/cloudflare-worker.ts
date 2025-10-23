@@ -1,5 +1,5 @@
-import { type McpServerConfig, createToolEntry } from '@angusdavis2/mcp-framework';
-import { McpDurableObject, type CloudflareEnv } from '@angusdavis2/mcp-framework/cloudflare';
+import { type McpServerConfig, createToolEntry } from '@alianzacap/mcp-framework';
+import { McpDurableObject, type CloudflareEnv } from '@alianzacap/mcp-framework/cloudflare';
 import {
   searchPropertiesDefinition,
   searchPropertiesHandler,

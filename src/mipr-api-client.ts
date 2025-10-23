@@ -1,4 +1,4 @@
-import { BaseApiClient, type ApiClientConfig } from '@angusdavis2/mcp-framework';
+import { BaseApiClient, type ApiClientConfig } from '@alianzacap/mcp-framework';
 import axios, { AxiosResponse } from 'axios';
 
 export interface PropertySearchParams {
