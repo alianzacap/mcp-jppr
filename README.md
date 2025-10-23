@@ -12,6 +12,8 @@ This MCP server provides tools to interact with Puerto Rico's [MIPR (Mapa Intera
 - Find properties within geographic areas (bounding boxes)
 - Convert between coordinate systems used in Puerto Rico
 
+This server is built using the `@alianzacap/mcp-framework`, providing consistent functionality across stdio, DXT, and Cloudflare Worker deployments.
+
 ## Installation
 
 1. Clone or download this repository
@@ -164,22 +166,34 @@ To use this server with Claude Desktop, add the following to your `claude_deskto
 }
 ```
 
-## HTTP API Usage
+## Cloudflare Worker Deployment
 
-When running in HTTP mode, the server provides these endpoints:
+The server can be deployed as a Cloudflare Worker for edge computing:
+
+```bash
+npm run dev:worker    # Local development
+npm run deploy:worker # Production deployment
+```
+
+### Endpoints
 
 - `GET /health` - Health check (no authentication required)
 - `POST /mcp` - MCP protocol endpoint (requires Bearer authentication)
-- `GET /sse` - Server-Sent Events endpoint (requires Bearer authentication)
 
 ### Authentication
+
+The framework provides built-in Bearer token authentication. Set the `MCP_BEARER_TOKEN` secret in Wrangler:
+
+```bash
+npx wrangler secret put MCP_BEARER_TOKEN
+```
 
 HTTP requests require Bearer token authentication:
 
 ```bash
 curl -H "Authorization: Bearer your-token-here" \
      -H "Content-Type: application/json" \
-     -X POST http://localhost:3000/mcp \
+     -X POST https://your-worker.workers.dev/mcp \
      -d '{"jsonrpc": "2.0", "method": "tools/call", "params": {...}}'
 ```
 
@@ -245,12 +259,22 @@ npm run dev
 
 ```
 src/
-├── index.ts              # Main server entry point
+├── index.ts              # Main server entry point (stdio)
 ├── server-stdio.ts       # Stdio transport server
-├── server-http.ts        # HTTP transport server
+├── cloudflare-worker.ts  # Cloudflare Worker using framework
 ├── mipr-api-client.ts    # MIPR API client
 └── jppr-tools.ts         # MCP tool definitions
 ```
+
+### Framework Architecture
+
+This server uses the `@alianzacap/mcp-framework` which provides:
+
+- **Consistent Tool Definitions**: Tools are defined once and work across all deployment methods
+- **Built-in Authentication**: Framework handles Bearer token authentication for Workers
+- **Health Checks**: Automatic health check endpoints
+- **Type Safety**: Full TypeScript support with Zod schema validation
+- **Edge Deployment**: Optimized for Cloudflare Workers with Durable Objects
 
 ## Legal Notice
 

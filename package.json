@@ -15,8 +15,8 @@
     "build:dxt": "npm run build && node --input-type=module --eval \"import('@alianzacap/mcp-framework').then(f => f.buildDxtAuto())\""
   },
   "dependencies": {
-    "@alianzacap/mcp-framework": "^2.0.2",
-    "@modelcontextprotocol/sdk": "^1.15.1",
+    "@alianzacap/mcp-framework": "^2.1.0",
+    "@modelcontextprotocol/sdk": "^1.17.0",
     "agents": "^0.0.100",
     "axios": "^1.6.0",
     "zod": "^3.25.76"
