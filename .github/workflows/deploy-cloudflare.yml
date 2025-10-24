@@ -45,7 +45,7 @@ jobs:
         working-directory: mcp-jppr
         run: npm ci
       
-      # 5. Build Worker code
+      # 5. Build Worker code  
       - name: Build Worker
         working-directory: mcp-jppr
         run: npm run build
@@ -56,11 +56,18 @@ jobs:
         run: npm test
         continue-on-error: false  # Fail deployment if tests fail
       
-      # 6.5. Copy built Worker to Terraform directory
-      - name: Copy Worker to Terraform
+      # 6.5. Bundle Worker with wrangler (includes all dependencies)
+      - name: Bundle Worker with Wrangler
+        working-directory: mcp-jppr
+        run: |
+          npx wrangler deploy --dry-run --outdir=.wrangler-output
+          
+      # 6.6. Copy bundled Worker to Terraform directory
+      - name: Copy Bundled Worker to Terraform
         run: |
           mkdir -p alianza-infra/mcp-jppr/dist
-          cp mcp-jppr/dist/cloudflare-worker.js alianza-infra/mcp-jppr/dist/
+          # Wrangler creates a bundled file in .wrangler-output
+          cp mcp-jppr/.wrangler-output/index.js alianza-infra/mcp-jppr/dist/cloudflare-worker.js
       
       # 7. Setup Terraform
       - name: Setup Terraform
