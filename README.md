@@ -168,32 +168,44 @@ To use this server with Claude Desktop, add the following to your `claude_deskto
 
 ## Cloudflare Worker Deployment
 
-The server can be deployed as a Cloudflare Worker for edge computing:
+### Automatic Deployment
+Every push to main automatically deploys via GitHub Actions.
 
+### Manual Deployment
 ```bash
-npm run dev:worker    # Local development
-npm run deploy:worker # Production deployment
+npm run build
+npx wrangler deploy
 ```
 
-### Endpoints
+### Required Configuration
 
-- `GET /health` - Health check (no authentication required)
-- `POST /mcp` - MCP protocol endpoint (requires Bearer authentication)
+**GitHub Secrets** (in repository settings):
+- `CLOUDFLARE_API_TOKEN` - Cloudflare API token with Workers edit permission
+- `CLOUDFLARE_ACCOUNT_ID` - Cloudflare account ID
+- `MCP_BEARER_TOKEN` - Bearer token for MCP authentication
+- `GH_PAT` - GitHub Personal Access Token for @alianzacap packages
+
+**Local Development:**
+Set secrets in `.dev.vars` file (not committed):
+```
+MCP_BEARER_TOKEN=your-local-token
+```
+
+### Worker URL
+Production: **https://mcp-jppr.alianza-capital.workers.dev**
+
+**Endpoints:**
+- `/health` - Health check (no authentication required)
+- `/mcp` - MCP protocol endpoint (requires Bearer authentication)
 
 ### Authentication
-
-The framework provides built-in Bearer token authentication. Set the `MCP_BEARER_TOKEN` secret in Wrangler:
-
-```bash
-npx wrangler secret put MCP_BEARER_TOKEN
-```
 
 HTTP requests require Bearer token authentication:
 
 ```bash
 curl -H "Authorization: Bearer your-token-here" \
      -H "Content-Type: application/json" \
-     -X POST https://your-worker.workers.dev/mcp \
+     -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp \
      -d '{"jsonrpc": "2.0", "method": "tools/call", "params": {...}}'
 ```
 
