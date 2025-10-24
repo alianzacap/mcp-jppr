@@ -6,11 +6,6 @@
   // Enable Node.js core module shims required by the `agents` package
   "compatibility_flags": ["nodejs_compat"],
   
-  // Environment variables
-  "vars": {
-    "MCP_BEARER_TOKEN": "your-bearer-token-here"
-  },
-  
   // Durable Object binding
   "durable_objects": {
     "bindings": [
