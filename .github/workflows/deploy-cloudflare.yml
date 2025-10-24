@@ -73,6 +73,7 @@ jobs:
         working-directory: alianza-infra
         env:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
         run: terraform init
       
@@ -81,6 +82,7 @@ jobs:
         working-directory: alianza-infra
         env:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
         run: terraform plan -target=module.cloudflare -out=tfplan
       
@@ -89,6 +91,7 @@ jobs:
         working-directory: alianza-infra
         env:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
         run: terraform apply -auto-approve tfplan
       
