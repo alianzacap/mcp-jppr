@@ -66,8 +66,8 @@ jobs:
       - name: Copy Bundled Worker to Terraform
         run: |
           mkdir -p alianza-infra/mcp-jppr/dist
-          # Wrangler creates a bundled file in .wrangler-output
-          cp mcp-jppr/.wrangler-output/index.js alianza-infra/mcp-jppr/dist/cloudflare-worker.js
+          # Wrangler creates bundled file named after the worker script
+          cp mcp-jppr/.wrangler-output/cloudflare-worker.js alianza-infra/mcp-jppr/dist/cloudflare-worker.js
       
       # 7. Setup Terraform
       - name: Setup Terraform
