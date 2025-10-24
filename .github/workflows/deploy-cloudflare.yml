@@ -1,5 +1,11 @@
 name: Deploy to Cloudflare Workers
 
+# Configuration: AWS Secrets Manager ARNs
+# These ARNs are not sensitive - they're just pointers to secrets
+env:
+  MCP_BEARER_TOKEN_ARN: "arn:aws:secretsmanager:us-east-2:915848750366:secret:mcp-servers/mcp-jppr-bearer-token-FnLW7X"
+  AWS_REGION: "us-east-2"
+
 on:
   push:
     branches:
@@ -36,16 +42,46 @@ jobs:
         run: npm test
         continue-on-error: false
       
+      # Configure AWS credentials to access Secrets Manager
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      # Fetch bearer token from AWS Secrets Manager
+      - name: Fetch Secrets from AWS
+        run: |
+          # Fetch MCP bearer token
+          MCP_TOKEN=$(aws secretsmanager get-secret-value \
+            --secret-id "${{ env.MCP_BEARER_TOKEN_ARN }}" \
+            --query SecretString \
+            --output text)
+          
+          # Mask in logs for security
+          echo "::add-mask::$MCP_TOKEN"
+          
+          # Export for later steps
+          echo "MCP_BEARER_TOKEN=$MCP_TOKEN" >> $GITHUB_ENV
+      
+      # Deploy Worker to Cloudflare (code only, no secrets in this step)
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          secrets: |
-            MCP_BEARER_TOKEN
-        env:
-          MCP_BEARER_TOKEN: ${{ secrets.MCP_BEARER_TOKEN }}
       
+      # Sync secrets to Cloudflare (idempotent - creates or updates)
+      - name: Sync Secrets to Cloudflare
+        run: |
+          # Sync MCP bearer token to Cloudflare Worker
+          echo "${{ env.MCP_BEARER_TOKEN }}" | npx wrangler secret put MCP_BEARER_TOKEN
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      
+      # Verify deployment with health check
       - name: Health Check
         run: |
           echo "Waiting for deployment to propagate..."
@@ -68,3 +104,4 @@ jobs:
         run: |
           echo "🎉 mcp-jppr deployed to Cloudflare Workers!"
           echo "URL: https://mcp-jppr.alianza-capital.workers.dev"
+          echo "Secrets synced from AWS Secrets Manager"
