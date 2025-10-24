@@ -56,6 +56,12 @@ jobs:
         run: npm test
         continue-on-error: false  # Fail deployment if tests fail
       
+      # 6.5. Copy built Worker to Terraform directory
+      - name: Copy Worker to Terraform
+        run: |
+          mkdir -p alianza-infra/mcp-jppr/dist
+          cp mcp-jppr/dist/cloudflare-worker.js alianza-infra/mcp-jppr/dist/
+      
       # 7. Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
