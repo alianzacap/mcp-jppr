@@ -16,6 +16,14 @@
     ]
   },
   
+  // KV namespace for OAuth session storage
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "REPLACE_WITH_KV_ID"
+    }
+  ],
+  
   // First-time migration to create SQLite-backed DO namespace
   "migrations": [
     {

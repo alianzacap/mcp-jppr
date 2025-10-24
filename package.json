@@ -17,15 +17,17 @@
   },
   "dependencies": {
     "@alianzacap/mcp-framework": "^3.0.0",
+    "@cloudflare/workers-oauth-provider": "^0.0.12",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "agents": "^0.0.100",
     "axios": "^1.6.0",
+    "octokit": "^5.0.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
-    "wrangler": "^4.42.0"
+    "wrangler": "^4.45.0"
   },
   "keywords": [
     "mcp",
