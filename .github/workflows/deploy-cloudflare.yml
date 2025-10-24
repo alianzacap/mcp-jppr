@@ -89,6 +89,12 @@ jobs:
           # Verify the copied file
           echo "=== Copied file size ==="
           ls -lh alianza-infra/mcp-jppr/dist/cloudflare-worker.js
+          
+          # DEBUG: Check if file still has import statements (should be bundled)
+          echo "=== First 20 lines of bundled file ==="
+          head -20 alianza-infra/mcp-jppr/dist/cloudflare-worker.js
+          echo "=== Checking for import statements (should be none if bundled) ==="
+          grep -c "^import" alianza-infra/mcp-jppr/dist/cloudflare-worker.js || echo "No import statements found (good!)"
       
       # 7. Setup Terraform
       - name: Setup Terraform
