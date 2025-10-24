@@ -60,14 +60,35 @@ jobs:
       - name: Bundle Worker with Wrangler
         working-directory: mcp-jppr
         run: |
+          # Dry run to bundle without deploying
           npx wrangler deploy --dry-run --outdir=.wrangler-output
+          echo "=== Wrangler output contents ==="
+          ls -la .wrangler-output/ || echo "Output directory not created"
+          find .wrangler-output -type f || echo "No files in output"
           
       # 6.6. Copy bundled Worker to Terraform directory
       - name: Copy Bundled Worker to Terraform
         run: |
           mkdir -p alianza-infra/mcp-jppr/dist
+          # List what files exist before copy
+          echo "=== Files in mcp-jppr/.wrangler-output ==="
+          ls -la mcp-jppr/.wrangler-output/ || echo "Directory doesn't exist"
+          
           # Wrangler creates bundled file named after the worker script
-          cp mcp-jppr/.wrangler-output/cloudflare-worker.js alianza-infra/mcp-jppr/dist/cloudflare-worker.js
+          if [ -f "mcp-jppr/.wrangler-output/cloudflare-worker.js" ]; then
+            cp mcp-jppr/.wrangler-output/cloudflare-worker.js alianza-infra/mcp-jppr/dist/cloudflare-worker.js
+            echo "✅ Copied cloudflare-worker.js"
+          else
+            echo "❌ cloudflare-worker.js not found, trying index.js"
+            cp mcp-jppr/.wrangler-output/index.js alianza-infra/mcp-jppr/dist/cloudflare-worker.js || {
+              echo "❌ No bundled file found!"
+              exit 1
+            }
+          fi
+          
+          # Verify the copied file
+          echo "=== Copied file size ==="
+          ls -lh alianza-infra/mcp-jppr/dist/cloudflare-worker.js
       
       # 7. Setup Terraform
       - name: Setup Terraform
