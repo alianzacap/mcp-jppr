@@ -77,7 +77,7 @@ jobs:
           AWS_REGION: us-east-2
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
+          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_BEARER_TOKEN }}
         run: terraform init
       
       # 9. Terraform Plan
@@ -92,7 +92,7 @@ jobs:
           TF_VAR_project_name: alianza-capital
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
+          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_BEARER_TOKEN }}
         run: terraform plan -target=module.cloudflare -out=tfplan
       
       # 10. Terraform Apply
@@ -107,7 +107,7 @@ jobs:
           TF_VAR_project_name: alianza-capital
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
+          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_BEARER_TOKEN }}
         run: terraform apply -auto-approve tfplan
       
       # 11. Post-deploy health check
