@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "test": "node test-catastros.js",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "start:stdio": "node dist/server-stdio.js",

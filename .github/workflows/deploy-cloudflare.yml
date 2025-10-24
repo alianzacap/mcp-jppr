@@ -1,0 +1,126 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main  # Auto-deploy on push to main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  test-and-deploy:
+    name: Test, Build, and Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout both repos
+      - name: Checkout mcp-jppr
+        uses: actions/checkout@v4
+        with:
+          path: mcp-jppr
+      
+      - name: Checkout alianza-infra
+        uses: actions/checkout@v4
+        with:
+          repository: alianzacap/alianza-infra
+          token: ${{ secrets.GH_PAT }}  # Personal Access Token for private repo
+          path: alianza-infra
+      
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mcp-jppr/package-lock.json
+      
+      # 3. Configure npm for GitHub Packages
+      - name: Configure npm
+        working-directory: mcp-jppr
+        run: |
+          echo "@alianzacap:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PAT }}" >> .npmrc
+      
+      # 4. Install dependencies
+      - name: Install dependencies
+        working-directory: mcp-jppr
+        run: npm ci
+      
+      # 5. Build Worker code
+      - name: Build Worker
+        working-directory: mcp-jppr
+        run: npm run build
+      
+      # 6. Run tests (pre-deploy validation)
+      - name: Run Tests
+        working-directory: mcp-jppr
+        run: npm test
+        continue-on-error: false  # Fail deployment if tests fail
+      
+      # 6.5. Copy built Worker to Terraform directory
+      - name: Copy Worker to Terraform
+        run: |
+          mkdir -p alianza-infra/mcp-jppr/dist
+          cp mcp-jppr/dist/cloudflare-worker.js alianza-infra/mcp-jppr/dist/
+      
+      # 7. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      
+      # 8. Terraform Init
+      - name: Terraform Init
+        working-directory: alianza-infra
+        env:
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
+        run: terraform init
+      
+      # 9. Terraform Plan
+      - name: Terraform Plan
+        working-directory: alianza-infra
+        env:
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
+        run: terraform plan -target=module.cloudflare -out=tfplan
+      
+      # 10. Terraform Apply
+      - name: Terraform Apply
+        working-directory: alianza-infra
+        env:
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_mcp_jppr_bearer_token: ${{ secrets.MCP_JPPR_BEARER_TOKEN }}
+        run: terraform apply -auto-approve tfplan
+      
+      # 11. Post-deploy health check
+      - name: Health Check
+        run: |
+          HEALTH_URL="https://mcp-jppr-dev.alianzacap.workers.dev/health"
+          echo "Testing health endpoint: $HEALTH_URL"
+          
+          # Wait 10 seconds for deployment to propagate
+          sleep 10
+          
+          # Check health endpoint
+          RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/health.json "$HEALTH_URL")
+          
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ Health check passed!"
+            cat /tmp/health.json
+          else
+            echo "❌ Health check failed with status: $RESPONSE"
+            exit 1
+          fi
+      
+      # 12. Notify on success
+      - name: Deployment Success
+        if: success()
+        run: |
+          echo "🎉 Successfully deployed mcp-jppr to Cloudflare Workers!"
+          echo "URL: https://mcp-jppr-dev.alianzacap.workers.dev"
+          echo "Health: https://mcp-jppr-dev.alianzacap.workers.dev/health"
+          echo "MCP: https://mcp-jppr-dev.alianzacap.workers.dev/mcp"
+
