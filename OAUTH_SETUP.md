@@ -13,71 +13,39 @@ This guide explains how to complete the OAuth setup for mcp-jppr using AWS Cogni
 
 ## Manual Steps Required 🔧
 
-### 1. Deploy Cognito via Terraform
+### 1. Deploy Cognito via Terraform ✅ DONE
 
-Navigate to the alianza-infra directory and deploy Cognito:
+Cognito infrastructure has been deployed!
 
-```bash
-cd /Users/angus/Code/alianza-infra
-terraform init
-terraform plan -var-file="environments/prod/terraform.tfvars"
-terraform apply
-```
+**Deployed Resources**:
+- Cognito User Pool: `alianza-users` (ID: `us-east-2_LZ46Pz8Wt`)
+- OAuth Client: `alianza-oauth-client` (ID: `nes74ha5ithfaehic296v5io5`)
+- Hosted UI Domain: `alianza-capital-auth-prod.auth.us-east-2.amazoncognito.com`
 
-This will create:
-- Cognito User Pool: `alianza-users`
-- OAuth Client: `alianza-oauth-client`
-- Hosted UI Domain: `alianza-capital-auth-prod.auth.{region}.amazoncognito.com`
+**OAuth Endpoints**:
+- Authorization: `https://alianza-capital-auth-prod.auth.us-east-2.amazoncognito.com/oauth2/authorize`
+- Token: `https://alianza-capital-auth-prod.auth.us-east-2.amazoncognito.com/oauth2/token`
 
-### 2. Get Cognito Credentials
+### 3. Create Cloudflare KV Namespace ✅ DONE
 
-After deployment, get the credentials from Terraform outputs:
+**Completed via Cloudflare Dashboard**:
+- KV Namespace ID: `1b17eab274d244df8aef153db187d86a`
+- Binding added to worker: `OAUTH_KV`
 
-```bash
-cd /Users/angus/Code/alianza-infra
-terraform output cognito_user_pool_id
-terraform output cognito_client_id
-terraform output cognito_authorization_endpoint
-terraform output cognito_token_endpoint
-```
+The binding has been added via the Cloudflare Dashboard.
 
-Save these values for the next steps.
+### 4. Update wrangler.jsonc ✅ DONE
 
-### 3. Create Cloudflare KV Namespace
+The KV namespace ID has been added to `wrangler.jsonc`.
 
-```bash
-cd /Users/angus/Code/mcp-jppr
-npx wrangler kv namespace create "OAUTH_KV"
-```
+### 5. Set OAuth Secrets in Cloudflare ✅ DONE
 
-Copy the KV namespace ID from the output.
-
-### 4. Update wrangler.jsonc
-
-Replace `REPLACE_WITH_KV_ID` in `wrangler.jsonc` with the actual KV namespace ID from step 3.
-
-### 5. Set OAuth Secrets in Cloudflare
-
-You'll need these secrets:
-- `COGNITO_USER_POOL_ID` - From Terraform output
-- `COGNITO_CLIENT_ID` - From Terraform output
-- `COGNITO_DOMAIN` - From Terraform output (e.g., `alianza-capital-auth-prod`)
-- `COGNITO_REGION` - AWS region (e.g., `us-east-2`)
-- `COOKIE_ENCRYPTION_KEY` - Generate with: `openssl rand -hex 32`
-
-Set them via Wrangler (if you have Cloudflare API token configured):
-
-```bash
-npx wrangler secret put COGNITO_USER_POOL_ID
-npx wrangler secret put COGNITO_CLIENT_ID
-npx wrangler secret put COGNITO_DOMAIN
-npx wrangler secret put COGNITO_REGION
-npx wrangler secret put COOKIE_ENCRYPTION_KEY
-```
-
-Or set them via Cloudflare Dashboard:
-1. Go to Workers & Pages → mcp-jppr → Settings → Variables
-2. Add each secret under "Secrets"
+All secrets have been set via wrangler:
+- ✅ `COGNITO_USER_POOL_ID` = `us-east-2_LZ46Pz8Wt`
+- ✅ `COGNITO_CLIENT_ID` = `nes74ha5ithfaehic296v5io5`
+- ✅ `COGNITO_DOMAIN` = `alianza-capital-auth-prod`
+- ✅ `COGNITO_REGION` = `us-east-2`
+- ✅ `COOKIE_ENCRYPTION_KEY` = `f261c77c667373ed0276838bafc5dc0579fcad1acdcb198b248ec6bb71c73dee`
 
 ### 6. Create Cognito User
 
