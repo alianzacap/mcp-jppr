@@ -30,7 +30,13 @@
       "tag": "v1",
       "new_sqlite_classes": ["JPPRMcpAgent"]
     }
-  ]
+  ],
+  
+  // Runtime variables (non-secret)
+  "vars": {
+    "COGNITO_AUTHORIZATION_ENDPOINT": "https://alianza-capital-auth-prod.auth.us-east-2.amazoncognito.com/oauth2/authorize",
+    "COGNITO_TOKEN_ENDPOINT": "https://alianza-capital-auth-prod.auth.us-east-2.amazoncognito.com/oauth2/token"
+  }
 }
 
 
