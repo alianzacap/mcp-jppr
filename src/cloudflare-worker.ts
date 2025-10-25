@@ -81,91 +81,159 @@ app.get("/health", async (c) => {
 
 // Authorization endpoint - redirect to Cognito
 app.get("/authorize", async (c) => {
-  const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
-  const { clientId } = oauthReqInfo;
-  if (!clientId) {
-    return c.text("Invalid request", 400);
-  }
+  try {
+    const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
+    const { clientId } = oauthReqInfo;
+    if (!clientId) {
+      console.error("Authorization failed: Missing clientId in OAuth request");
+      return c.text("Invalid request: Missing client_id", 400);
+    }
 
-  // Redirect to Cognito hosted UI
-  const state = btoa(JSON.stringify(oauthReqInfo));
-  const redirectUrl = `${c.env.COGNITO_AUTHORIZATION_ENDPOINT}?` +
-    `client_id=${c.env.COGNITO_CLIENT_ID}&` +
-    `redirect_uri=${encodeURIComponent(new URL('/callback', c.req.url).href)}&` +
-    `response_type=code&` +
-    `scope=openid+email+profile&` +
-    `state=${state}`;
-  
-  return Response.redirect(redirectUrl);
+    // Redirect to Cognito hosted UI
+    const state = btoa(JSON.stringify(oauthReqInfo));
+    const callbackUrl = new URL('/callback', c.req.url).href;
+    const redirectUrl = `${c.env.COGNITO_AUTHORIZATION_ENDPOINT}?` +
+      `client_id=${c.env.COGNITO_CLIENT_ID}&` +
+      `redirect_uri=${encodeURIComponent(callbackUrl)}&` +
+      `response_type=code&` +
+      `scope=openid+email+profile&` +
+      `state=${state}`;
+    
+    console.log("Authorization request:", {
+      mcp_client_id: clientId,
+      cognito_client_id: c.env.COGNITO_CLIENT_ID,
+      callback_url: callbackUrl,
+      redirect_url: redirectUrl.substring(0, 150) + "..." // Truncate for logging
+    });
+    
+    return Response.redirect(redirectUrl);
+  } catch (error) {
+    console.error("Authorization endpoint error:", error);
+    return c.text(`Authorization error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
+  }
 });
 
 // Callback endpoint - exchange code for token
 app.get("/callback", async (c) => {
-  const code = c.req.query("code");
-  const state = c.req.query("state");
-  
-  if (!code || !state) {
-    return c.text("Missing code or state", 400);
-  }
+  try {
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+    const error = c.req.query("error");
+    const errorDescription = c.req.query("error_description");
+    
+    // Check for Cognito error response
+    if (error) {
+      console.error("Cognito returned error:", {
+        error,
+        error_description: errorDescription,
+        full_url: c.req.url
+      });
+      return c.text(`Cognito authentication error: ${error} - ${errorDescription || 'No description'}`, 400);
+    }
+    
+    if (!code || !state) {
+      console.error("Callback missing required parameters:", { code: !!code, state: !!state });
+      return c.text("Missing code or state parameter", 400);
+    }
 
-  // Parse the oauthReqInfo from state
-  const oauthReqInfo = JSON.parse(atob(state)) as AuthRequest;
-  if (!oauthReqInfo.clientId) {
-    return c.text("Invalid state", 400);
-  }
+    // Parse the oauthReqInfo from state
+    let oauthReqInfo: AuthRequest;
+    try {
+      oauthReqInfo = JSON.parse(atob(state)) as AuthRequest;
+    } catch (e) {
+      console.error("Failed to parse state parameter:", e);
+      return c.text("Invalid state parameter", 400);
+    }
+    
+    if (!oauthReqInfo.clientId) {
+      console.error("State missing clientId:", oauthReqInfo);
+      return c.text("Invalid state: missing clientId", 400);
+    }
 
-  // Exchange code for token
-  const tokenUrl = `${c.env.COGNITO_TOKEN_ENDPOINT}`;
-  const credentials = btoa(`${c.env.COGNITO_CLIENT_ID}:${c.env.COGNITO_CLIENT_SECRET}`);
-  
-  const tokenResponse = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: new URL('/callback', c.req.url).href
-    })
-  });
-  
-  if (!tokenResponse.ok) {
-    return c.text('Failed to exchange code for token', 500);
-  }
-  
-  const { access_token, id_token } = await tokenResponse.json();
-  
-  if (!access_token || !id_token) {
-    return c.text('Failed to get tokens', 500);
-  }
-  
-  // Decode ID token to get user info
-  const [, payload] = id_token.split('.');
-  const userInfo = JSON.parse(atob(payload));
-  
-  // Complete OAuth flow
-  const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
-    metadata: {
-      label: userInfo.name || userInfo.email,
-    },
-    props: {
-      email: userInfo.email,
-      name: userInfo.name || userInfo.email,
+    // Exchange code for token
+    const tokenUrl = c.env.COGNITO_TOKEN_ENDPOINT;
+    const callbackUrl = new URL('/callback', c.req.url).href;
+    const credentials = btoa(`${c.env.COGNITO_CLIENT_ID}:${c.env.COGNITO_CLIENT_SECRET}`);
+    
+    console.log("Exchanging authorization code for tokens:", {
+      token_url: tokenUrl,
+      callback_url: callbackUrl,
+      code_length: code.length,
+      has_client_secret: !!c.env.COGNITO_CLIENT_SECRET
+    });
+    
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${credentials}`
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: callbackUrl
+      })
+    });
+    
+    if (!tokenResponse.ok) {
+      const errorBody = await tokenResponse.text();
+      console.error("Token exchange failed:", {
+        status: tokenResponse.status,
+        status_text: tokenResponse.statusText,
+        error_body: errorBody
+      });
+      return c.text(`Failed to exchange code for token: ${tokenResponse.status} ${tokenResponse.statusText} - ${errorBody}`, 500);
+    }
+    
+    const tokenData = await tokenResponse.json();
+    const { access_token, id_token } = tokenData;
+    
+    if (!access_token || !id_token) {
+      console.error("Token response missing required tokens:", {
+        has_access_token: !!access_token,
+        has_id_token: !!id_token,
+        response_keys: Object.keys(tokenData)
+      });
+      return c.text('Token response missing access_token or id_token', 500);
+    }
+    
+    // Decode ID token to get user info
+    const [, payload] = id_token.split('.');
+    const userInfo = JSON.parse(atob(payload));
+    
+    console.log("Successfully authenticated user:", {
       sub: userInfo.sub,
-    } as Props,
-    request: oauthReqInfo,
-    scope: oauthReqInfo.scope,
-    userId: userInfo.sub,
-  });
+      email: userInfo.email,
+      name: userInfo.name
+    });
+    
+    // Complete OAuth flow
+    const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
+      metadata: {
+        label: userInfo.name || userInfo.email,
+      },
+      props: {
+        email: userInfo.email,
+        name: userInfo.name || userInfo.email,
+        sub: userInfo.sub,
+      } as Props,
+      request: oauthReqInfo,
+      scope: oauthReqInfo.scope,
+      userId: userInfo.sub,
+    });
 
-  return Response.redirect(redirectTo);
+    console.log("OAuth flow completed, redirecting to:", redirectTo);
+    return Response.redirect(redirectTo);
+  } catch (error) {
+    console.error("Callback endpoint error:", error);
+    return c.text(`Callback error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
+  }
 });
 
 const CognitoHandler = app;
 
 // Use OAuthProvider for MCP OAuth server functionality
+// The OAuth provider automatically uses the OAUTH_KV binding from the environment
 export default new OAuthProvider({
   apiHandler: JPPRMcpAgent.mount("/mcp") as any,
   apiRoute: "/mcp",
