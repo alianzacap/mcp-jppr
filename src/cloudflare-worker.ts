@@ -68,6 +68,17 @@ export class JPPRMcpAgent extends McpAgent<any, Record<string, never>, Props> {
 // Cognito OAuth handler
 const app = new Hono<{ Bindings: Env & { OAUTH_PROVIDER: OAuthHelpers } }>();
 
+// Health check endpoint (no auth required)
+app.get("/health", async (c) => {
+  return c.json({
+    status: 'healthy',
+    service: 'mcp-jppr',
+    version: '1.1.0',
+    auth: 'oauth',
+    endpoints: ['/mcp', '/authorize', '/callback', '/register', '/token']
+  });
+});
+
 // Authorization endpoint - redirect to Cognito
 app.get("/authorize", async (c) => {
   const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
