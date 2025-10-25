@@ -16,6 +16,7 @@ dist-dxt/
 .env
 .env.local
 .env.*.local
+.dev.vars
 
 # IDE/Editor files
 .vscode/
