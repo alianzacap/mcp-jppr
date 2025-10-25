@@ -15,10 +15,12 @@ import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provid
 interface Env {
   MCP_OBJECT: any; // DurableObjectNamespace
   OAUTH_KV: any; // KVNamespace
-  COGNITO_CLIENT_ID: string;
-  COGNITO_CLIENT_SECRET: string;
-  COGNITO_AUTHORIZATION_ENDPOINT: string;
-  COGNITO_TOKEN_ENDPOINT: string;
+  AUTH0_DOMAIN: string;
+  AUTH0_CLIENT_ID: string;
+  AUTH0_CLIENT_SECRET: string;
+  AUTH0_AUDIENCE: string;
+  AUTH0_SCOPE: string;
+  NODE_ENV: string;
   OAUTH_PROVIDER: OAuthHelpers;
 }
 
@@ -79,7 +81,7 @@ app.get("/health", async (c) => {
   });
 });
 
-// Authorization endpoint - redirect to Cognito
+// Authorization endpoint - redirect to Auth0
 app.get("/authorize", async (c) => {
   try {
     const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
@@ -89,19 +91,20 @@ app.get("/authorize", async (c) => {
       return c.text("Invalid request: Missing client_id", 400);
     }
 
-    // Redirect to Cognito hosted UI
+    // Redirect to Auth0 hosted UI
     const state = btoa(JSON.stringify(oauthReqInfo));
     const callbackUrl = new URL('/callback', c.req.url).href;
-    const redirectUrl = `${c.env.COGNITO_AUTHORIZATION_ENDPOINT}?` +
-      `client_id=${c.env.COGNITO_CLIENT_ID}&` +
+    const redirectUrl = `https://${c.env.AUTH0_DOMAIN}/authorize?` +
+      `client_id=${c.env.AUTH0_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(callbackUrl)}&` +
       `response_type=code&` +
-      `scope=openid+email+profile&` +
+      `scope=${encodeURIComponent(c.env.AUTH0_SCOPE)}&` +
+      `audience=${encodeURIComponent(c.env.AUTH0_AUDIENCE)}&` +
       `state=${state}`;
     
     console.log("Authorization request:", {
       mcp_client_id: clientId,
-      cognito_client_id: c.env.COGNITO_CLIENT_ID,
+      auth0_client_id: c.env.AUTH0_CLIENT_ID,
       callback_url: callbackUrl,
       redirect_url: redirectUrl.substring(0, 150) + "..." // Truncate for logging
     });
@@ -121,14 +124,14 @@ app.get("/callback", async (c) => {
     const error = c.req.query("error");
     const errorDescription = c.req.query("error_description");
     
-    // Check for Cognito error response
+    // Check for Auth0 error response
     if (error) {
-      console.error("Cognito returned error:", {
+      console.error("Auth0 returned error:", {
         error,
         error_description: errorDescription,
         full_url: c.req.url
       });
-      return c.text(`Cognito authentication error: ${error} - ${errorDescription || 'No description'}`, 400);
+      return c.text(`Auth0 authentication error: ${error} - ${errorDescription || 'No description'}`, 400);
     }
     
     if (!code || !state) {
@@ -150,26 +153,26 @@ app.get("/callback", async (c) => {
       return c.text("Invalid state: missing clientId", 400);
     }
 
-    // Exchange code for token
-    const tokenUrl = c.env.COGNITO_TOKEN_ENDPOINT;
+    // Exchange code for token with Auth0
+    const tokenUrl = `https://${c.env.AUTH0_DOMAIN}/oauth/token`;
     const callbackUrl = new URL('/callback', c.req.url).href;
-    const credentials = btoa(`${c.env.COGNITO_CLIENT_ID}:${c.env.COGNITO_CLIENT_SECRET}`);
     
     console.log("Exchanging authorization code for tokens:", {
       token_url: tokenUrl,
       callback_url: callbackUrl,
       code_length: code.length,
-      has_client_secret: !!c.env.COGNITO_CLIENT_SECRET
+      has_client_secret: !!c.env.AUTH0_CLIENT_SECRET
     });
     
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${credentials}`
+        'Content-Type': 'application/json'
       },
-      body: new URLSearchParams({
+      body: JSON.stringify({
         grant_type: 'authorization_code',
+        client_id: c.env.AUTH0_CLIENT_ID,
+        client_secret: c.env.AUTH0_CLIENT_SECRET,
         code,
         redirect_uri: callbackUrl
       })
@@ -230,15 +233,16 @@ app.get("/callback", async (c) => {
   }
 });
 
-const CognitoHandler = app;
+const Auth0Handler = app;
 
 // Use OAuthProvider for MCP OAuth server functionality
 // The OAuth provider automatically uses the OAUTH_KV binding from the environment
+// Auth0 acts as the OIDC identity provider
 export default new OAuthProvider({
   apiHandler: JPPRMcpAgent.mount("/mcp") as any,
   apiRoute: "/mcp",
   authorizeEndpoint: "/authorize",
   clientRegistrationEndpoint: "/register",
-  defaultHandler: CognitoHandler as any,
+  defaultHandler: Auth0Handler as any,
   tokenEndpoint: "/token",
 });
