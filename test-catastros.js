@@ -136,7 +136,7 @@ async function runTests() {
         // Extract just the zoning part from Zone field (format: "Zoning: AD (97%), VIAL (3%) | ...")
         const zoningPart = zoneMatch?.[1]?.match(/Zoning: ([^|]+)/)?.[1]?.trim() || 'Unknown';
         
-        console.log(`  ✅ Found: ${municipalityMatch?.[1] || 'Unknown'} | Zone: ${zoningPart} | Area: ${areaMatch?.[1] || 'Unknown'} sq m`);
+        console.log(`  ✅ Found: ${municipalityMatch?.[1] || 'Unknown'} | Zoning: ${zoningPart} | Area: ${areaMatch?.[1] || 'Unknown'} sq m`);
       } else {
         console.log(`  ❌ Failed: ${result.error}`);
       }
