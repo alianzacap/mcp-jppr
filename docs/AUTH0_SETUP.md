@@ -174,6 +174,96 @@ curl -X POST https://mcp-jppr.alianza-capital.workers.dev/register \
 https://mcp-jppr.alianza-capital.workers.dev/authorize?client_id=<client_id>&redirect_uri=https://example.com/callback&response_type=code&scope=openid+email+profile
 ```
 
+## Machine-to-Machine (M2M) Authentication
+
+For server-to-server connections, use the M2M endpoint with JWT bearer tokens.
+
+### Getting M2M Credentials
+
+1. Navigate to Auth0 Dashboard → Applications
+2. Find "mcp-jppr-m2m" application (created by Terraform)
+3. Copy Client ID and Client Secret
+
+### Obtaining Access Token
+
+```bash
+curl -X POST https://dev-alianzacap.us.auth0.com/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "M2M_CLIENT_ID",
+    "client_secret": "M2M_CLIENT_SECRET",
+    "audience": "urn:mcp-jppr",
+    "grant_type": "client_credentials"
+  }'
+```
+
+Response:
+```json
+{
+  "access_token": "eyJhbGc...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
+### Using M2M Endpoint
+
+```bash
+curl -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp-m2m \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/list",
+    "id": 1
+  }'
+```
+
+### Sharing Credentials with Multiple Server Clients
+
+The `mcp-jppr-m2m` application provides one set of credentials that can be shared across multiple server clients. All servers use the same `client_id` and `client_secret` to obtain tokens.
+
+**Note**: If you need to distinguish between different server clients in the future or revoke access for specific clients, you can create additional M2M applications in the Auth0 dashboard and authorize them for the "JPPR Data API" (urn:mcp-jppr).
+
+### M2M Testing Examples
+
+**1. List available tools**:
+```bash
+TOKEN=$(curl -s -X POST https://dev-alianzacap.us.auth0.com/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "M2M_CLIENT_ID",
+    "client_secret": "M2M_CLIENT_SECRET",
+    "audience": "urn:mcp-jppr",
+    "grant_type": "client_credentials"
+  }' | jq -r '.access_token')
+
+curl -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp-m2m \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/list",
+    "id": 1
+  }'
+```
+
+**2. Search for properties**:
+```bash
+curl -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp-m2m \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "name": "search_properties",
+      "arguments": { "query": "San Juan" }
+    },
+    "id": 1
+  }'
+```
+
 ## Auth0 Configuration
 
 ### Test User

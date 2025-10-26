@@ -10,6 +10,7 @@ import {
   getPropertyDetailsHandler
 } from './jppr-tools.js';
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
+import { validateAuth0Token } from './auth0-jwt-validator.js';
 
 // Environment variables
 interface Env {
@@ -76,8 +77,8 @@ app.get("/health", async (c) => {
     status: 'healthy',
     service: 'mcp-jppr',
     version: '1.1.0',
-    auth: 'oauth',
-    endpoints: ['/mcp', '/authorize', '/callback', '/register', '/token']
+    auth: 'oauth + m2m',
+    endpoints: ['/mcp', '/mcp-m2m', '/authorize', '/callback', '/register', '/token']
   });
 });
 
@@ -230,6 +231,58 @@ app.get("/callback", async (c) => {
   } catch (error) {
     console.error("Callback endpoint error:", error);
     return c.text(`Callback error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
+  }
+});
+
+// M2M endpoint for server-to-server authentication
+app.all("/mcp-m2m", async (c) => {
+  try {
+    // Extract Bearer token
+    const auth = c.req.header('authorization');
+    if (!auth?.startsWith('Bearer ')) {
+      return c.json({
+        jsonrpc: '2.0',
+        error: { code: -32001, message: 'Unauthorized: Missing Bearer token' },
+        id: null
+      }, { status: 401 });
+    }
+
+    const token = auth.split(' ')[1];
+
+    // Validate JWT token with Auth0
+    const decoded = await validateAuth0Token(
+      token,
+      c.env.AUTH0_DOMAIN,
+      c.env.AUTH0_AUDIENCE
+    );
+
+    // Verify it's a client_credentials token (M2M)
+    if (decoded.gty !== 'client-credentials') {
+      return c.json({
+        jsonrpc: '2.0',
+        error: { code: -32002, message: 'Invalid token type: M2M endpoint requires client_credentials grant' },
+        id: null
+      }, { status: 403 });
+    }
+
+    console.log("M2M authentication successful:", {
+      client_id: decoded.azp,
+      sub: decoded.sub,
+      scopes: decoded.scope
+    });
+
+    // Forward to MCP agent
+    return JPPRMcpAgent.serve("/mcp-m2m").fetch(c.req.raw, c.env, c.executionCtx);
+  } catch (error) {
+    console.error("M2M authentication failed:", error);
+    return c.json({
+      jsonrpc: '2.0',
+      error: { 
+        code: -32003, 
+        message: `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      },
+      id: null
+    }, { status: 401 });
   }
 });
 
