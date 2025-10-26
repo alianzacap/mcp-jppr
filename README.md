@@ -238,7 +238,12 @@ curl -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp-m2m \
   }'
 ```
 
-**Note**: To get M2M credentials, see [docs/AUTH0_SETUP.md](./docs/AUTH0_SETUP.md#machine-to-machine-m2m-authentication).
+**M2M Application**: The Auth0 application for M2M connections is named **`mcp-jppr-m2m`**. To get credentials:
+1. Navigate to Auth0 Dashboard → Applications
+2. Find the **`mcp-jppr-m2m`** application
+3. Copy Client ID and Client Secret
+
+See [docs/AUTH0_SETUP.md](./docs/AUTH0_SETUP.md#machine-to-machine-m2m-authentication) for detailed instructions.
 
 ## Testing
 
