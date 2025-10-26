@@ -288,14 +288,27 @@ app.all("/mcp-m2m", async (c) => {
 
 const Auth0Handler = app;
 
-// Use OAuthProvider for MCP OAuth server functionality
-// The OAuth provider automatically uses the OAUTH_KV binding from the environment
-// Auth0 acts as the OIDC identity provider
-export default new OAuthProvider({
-  apiHandler: JPPRMcpAgent.mount("/mcp") as any,
-  apiRoute: "/mcp",
-  authorizeEndpoint: "/authorize",
-  clientRegistrationEndpoint: "/register",
-  defaultHandler: Auth0Handler as any,
-  tokenEndpoint: "/token",
-});
+// Create a custom handler that routes OAuth requests to OAuthProvider
+// and M2M requests directly to our custom handler
+export default {
+  async fetch(request: Request, env: Env, ctx: any) {
+    const url = new URL(request.url);
+    
+    // Route M2M endpoint directly
+    if (url.pathname === '/mcp-m2m') {
+      return Auth0Handler.fetch(request, env, ctx);
+    }
+    
+    // Everything else goes through OAuthProvider
+    const oauthProvider = new OAuthProvider({
+      apiHandler: JPPRMcpAgent.mount("/mcp") as any,
+      apiRoute: "/mcp",
+      authorizeEndpoint: "/authorize",
+      clientRegistrationEndpoint: "/register",
+      defaultHandler: Auth0Handler as any,
+      tokenEndpoint: "/token",
+    });
+    
+    return oauthProvider.fetch(request, env, ctx);
+  }
+};
