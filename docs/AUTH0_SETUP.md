@@ -261,6 +261,35 @@ We migrated from AWS Cognito to Auth0 on October 25, 2025 because:
 
 All Cognito resources have been destroyed. Historical documentation is preserved in Git history.
 
+## Replicating for New MCP Servers
+
+When creating a new MCP server with Auth0, you need:
+
+**1. AWS Secrets**:
+- `alianza/cloudflare-api-token` - **Shared** (already exists, reuse for all workers)
+- `alianza/auth0-mcp-YOUR-SERVER-client` - **Create new** with:
+  ```json
+  {
+    "domain": "dev-alianzacap.us.auth0.com",
+    "client_id": "<from_terraform_output>",
+    "client_secret": "<from_auth0_dashboard>",
+    "audience": "urn:mcp-your-server",
+    "issuer": "https://dev-alianzacap.us.auth0.com/"
+  }
+  ```
+
+**2. Terraform** (in `alianza-infra`):
+- Add Auth0 module in `main.tf` (copy pattern from `module "auth0"`)
+- Apply to create Auth0 application and API
+
+**3. Sync Script**:
+- Copy `scripts/sync-secrets-from-aws.sh` to new repo
+- Update secret ID from `alianza/auth0-mcp-jppr-client` to your secret name
+
+**4. Deploy**:
+- Run sync script: `./scripts/sync-secrets-from-aws.sh`
+- Deploy worker: `npx wrangler deploy`
+
 ## References
 
 - [Auth0 Documentation](https://auth0.com/docs)
