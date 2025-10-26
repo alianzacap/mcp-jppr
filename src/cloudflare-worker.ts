@@ -271,9 +271,10 @@ app.all("/mcp-m2m", async (c) => {
       scopes: decoded.scope
     });
 
-    // Forward to MCP agent using static mount
-    // This handles MCP requests without requiring OAuth sessions
-    return JPPRMcpAgent.mount("/mcp-m2m").fetch(c.req.raw.clone(), c.env, c.executionCtx);
+    // Forward to MCP agent - it handles MCP protocol requests
+    // No session required for M2M, the bearer token is sufficient auth
+    const handler = JPPRMcpAgent.mount("/mcp-m2m");
+    return handler.fetch(c.req.raw, c.env, c.executionCtx);
   } catch (error) {
     console.error("M2M authentication failed:", error);
     return c.json({
