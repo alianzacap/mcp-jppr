@@ -157,7 +157,7 @@ The Cloudflare Worker deployment uses **Auth0 OAuth** for secure authentication.
 **Quick Overview:**
 - **Auth0 Domain**: dev-alianzacap.us.auth0.com
 - **Application**: mcp-jppr
-- **Secrets**: AWS Secrets Manager (`alianza/auth0-mcp-jppr-client`, `alianza/cloudflare-api-token`)
+- **Secrets**: AWS Secrets Manager (`alianza/auth0-mcp-jppr-client`, `alianza/cloudflare-workers-token`)
 
 ### Deployment
 

@@ -2,7 +2,7 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 import { McpAgent } from 'agents/mcp';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Hono } from 'hono';
-import { createToolEntry } from '@alianzacap/mcp-framework';
+import { createToolEntry, validateAuth0Token, createM2MHandlerForHono } from '@alianzacap/mcp-framework/cloudflare';
 import {
   searchPropertiesDefinition,
   searchPropertiesHandler,
@@ -10,7 +10,6 @@ import {
   getPropertyDetailsHandler
 } from './jppr-tools.js';
 import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
-import { validateAuth0Token } from './auth0-jwt-validator.js';
 
 // Environment variables
 interface Env {
@@ -234,69 +233,23 @@ app.get("/callback", async (c) => {
   }
 });
 
-// M2M endpoint for server-to-server authentication
+// M2M endpoint for server-to-server authentication  
 app.all("/mcp-m2m", async (c) => {
-  try {
-    // Extract Bearer token
-    const auth = c.req.header('authorization');
-    if (!auth?.startsWith('Bearer ')) {
-      return c.json({
-        jsonrpc: '2.0',
-        error: { code: -32001, message: 'Unauthorized: Missing Bearer token' },
-        id: null
-      }, { status: 401 });
+  const handler = createM2MHandlerForHono({
+    agentClass: JPPRMcpAgent as typeof McpAgent,
+    validateToken: async (token: string, c: any) => {
+      return await validateAuth0Token(token, c.env.AUTH0_DOMAIN, c.env.AUTH0_AUDIENCE);
+    },
+    validateTokenType: (decoded: any) => decoded.gty === 'client-credentials',
+    onAuthSuccess: (decoded: any, c: any) => {
+      console.log("M2M authentication successful:", {
+        client_id: decoded.azp,
+        sub: decoded.sub,
+        scopes: decoded.scope
+      });
     }
-
-    const token = auth.split(' ')[1];
-
-    // Validate JWT token with Auth0
-    const decoded = await validateAuth0Token(
-      token,
-      c.env.AUTH0_DOMAIN,
-      c.env.AUTH0_AUDIENCE
-    );
-
-    // Verify it's a client_credentials token (M2M)
-    if (decoded.gty !== 'client-credentials') {
-      return c.json({
-        jsonrpc: '2.0',
-        error: { code: -32002, message: 'Invalid token type: M2M endpoint requires client_credentials grant' },
-        id: null
-      }, { status: 403 });
-    }
-
-    console.log("M2M authentication successful:", {
-      client_id: decoded.azp,
-      sub: decoded.sub,
-      scopes: decoded.scope
-    });
-
-    // Create a fresh Request object to avoid body consumption issues with Hono
-    // Hono wraps requests and may consume the body, but the agents SDK needs to read it
-    const requestBody = c.req.method === 'POST' || c.req.method === 'PUT' 
-      ? await c.req.raw.clone().arrayBuffer() 
-      : null;
-    
-    const freshRequest = new Request(c.req.url, {
-      method: c.req.method,
-      headers: c.req.raw.headers,
-      body: requestBody
-    });
-
-    // Forward to MCP agent - it handles MCP protocol requests
-    // No session required for M2M, the bearer token is sufficient auth
-    return JPPRMcpAgent.serve("/mcp-m2m").fetch(freshRequest, c.env, c.executionCtx);
-  } catch (error) {
-    console.error("M2M authentication failed:", error);
-    return c.json({
-      jsonrpc: '2.0',
-      error: { 
-        code: -32003, 
-        message: `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
-      },
-      id: null
-    }, { status: 401 });
-  }
+  });
+  return handler(c);
 });
 
 const Auth0Handler = app;

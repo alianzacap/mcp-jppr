@@ -16,13 +16,12 @@
     "build:dxt": "npm run build && node --input-type=module --eval \"import('@alianzacap/mcp-framework').then(f => f.buildDxtAuto())\""
   },
   "dependencies": {
-    "@alianzacap/mcp-framework": "^3.0.0",
+    "@alianzacap/mcp-framework": "^3.0.2",
     "@cloudflare/workers-oauth-provider": "^0.0.12",
     "@modelcontextprotocol/sdk": "^1.17.0",
-    "agents": "^0.0.100",
+    "agents": "^0.0.113",
     "axios": "^1.6.0",
     "hono": "^4.10.3",
-    "jose": "^5.2.0",
     "octokit": "^5.0.4",
     "zod": "^3.25.76"
   },
