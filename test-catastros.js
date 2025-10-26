@@ -130,10 +130,13 @@ async function runTests() {
         // Extract key info from response
         const content = result.response.content[0].text;
         const municipalityMatch = content.match(/\*\*Municipality:\*\* ([^\n]+)/);
-        const zoningMatch = content.match(/\*\*Zoning:\*\* ([^\n]+)/);
+        const zoneMatch = content.match(/\*\*Zone:\*\* ([^\n]+)/);
         const areaMatch = content.match(/\*\*Area:\*\* ([\d.]+) sq meters/);
         
-        console.log(`  ✅ Found: ${municipalityMatch?.[1] || 'Unknown'} | Zoning: ${zoningMatch?.[1] || 'Unknown'} | Area: ${areaMatch?.[1] || 'Unknown'} sq m`);
+        // Extract just the zoning part from Zone field (format: "Zoning: AD (97%), VIAL (3%) | ...")
+        const zoningPart = zoneMatch?.[1]?.match(/Zoning: ([^|]+)/)?.[1]?.trim() || 'Unknown';
+        
+        console.log(`  ✅ Found: ${municipalityMatch?.[1] || 'Unknown'} | Zone: ${zoningPart} | Area: ${areaMatch?.[1] || 'Unknown'} sq m`);
       } else {
         console.log(`  ❌ Failed: ${result.error}`);
       }
