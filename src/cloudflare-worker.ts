@@ -271,10 +271,21 @@ app.all("/mcp-m2m", async (c) => {
       scopes: decoded.scope
     });
 
+    // Create a fresh Request object to avoid body consumption issues with Hono
+    // Hono wraps requests and may consume the body, but the agents SDK needs to read it
+    const requestBody = c.req.method === 'POST' || c.req.method === 'PUT' 
+      ? await c.req.raw.clone().arrayBuffer() 
+      : null;
+    
+    const freshRequest = new Request(c.req.url, {
+      method: c.req.method,
+      headers: c.req.raw.headers,
+      body: requestBody
+    });
+
     // Forward to MCP agent - it handles MCP protocol requests
     // No session required for M2M, the bearer token is sufficient auth
-    const handler = JPPRMcpAgent.mount("/mcp-m2m");
-    return handler.fetch(c.req.raw, c.env, c.executionCtx);
+    return JPPRMcpAgent.serve("/mcp-m2m").fetch(freshRequest, c.env, c.executionCtx);
   } catch (error) {
     console.error("M2M authentication failed:", error);
     return c.json({
