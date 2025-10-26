@@ -47,7 +47,7 @@ jobs:
         id: cloudflare-creds
         run: |
           SECRET=$(aws secretsmanager get-secret-value \
-            --secret-id alianza/cloudflare-api-token \
+            --secret-id alianza/cloudflare-workers-token \
             --region us-east-2 \
             --query 'SecretString' \
             --output text)
