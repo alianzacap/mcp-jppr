@@ -36,42 +36,17 @@ This server is built using the `@alianzacap/mcp-framework`, providing consistent
 
 ## Usage
 
-### Stdio Mode (Command Line)
+### Stdio Mode (Local Claude Desktop)
 
-For integration with Claude Desktop or other MCP clients:
+For local integration with Claude Desktop:
 
 ```bash
 npm run start:stdio
 ```
 
-### HTTP Mode (Web API)
+### Cloudflare Worker (Production)
 
-For web-based integrations:
-
-```bash
-npm run start:http
-```
-
-The HTTP server will start on `http://localhost:3000` by default.
-
-## Configuration
-
-### Environment Variables
-
-- `PORT`: HTTP server port (default: 3000)
-- `HOST`: HTTP server host (default: 0.0.0.0)
-- `BEARER_TOKEN`: Authentication token for HTTP API (default: "default-jppr-token-change-me")
-- `CORS_ORIGIN`: CORS origin policy (default: "*")
-
-### Example Configuration
-
-```bash
-export PORT=3001
-export HOST=localhost
-export BEARER_TOKEN=your-secure-token-here
-export CORS_ORIGIN=https://your-domain.com
-npm run start:http
-```
+See **Cloudflare Worker Deployment** section below for Auth0 OAuth setup.
 
 ## Available Tools
 
