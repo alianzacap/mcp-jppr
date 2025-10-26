@@ -289,27 +289,27 @@ app.all("/mcp-m2m", async (c) => {
 
 const Auth0Handler = app;
 
-// Create a custom handler that routes OAuth requests to OAuthProvider
-// and M2M requests directly to our custom handler
+// OAuthProvider for OAuth endpoints
+const oauthProvider = new OAuthProvider({
+  apiHandler: JPPRMcpAgent.mount("/mcp") as any,
+  apiRoute: "/mcp",
+  authorizeEndpoint: "/authorize",
+  clientRegistrationEndpoint: "/register",
+  defaultHandler: Auth0Handler as any,
+  tokenEndpoint: "/token",
+});
+
+// Top-level router to handle non-OAuth endpoints
 export default {
   async fetch(request: Request, env: Env, ctx: any) {
     const url = new URL(request.url);
     
-    // Route M2M endpoint directly
-    if (url.pathname === '/mcp-m2m') {
+    // Routes that bypass OAuth entirely
+    if (url.pathname === '/mcp-m2m' || url.pathname === '/health') {
       return Auth0Handler.fetch(request, env, ctx);
     }
     
     // Everything else goes through OAuthProvider
-    const oauthProvider = new OAuthProvider({
-      apiHandler: JPPRMcpAgent.mount("/mcp") as any,
-      apiRoute: "/mcp",
-      authorizeEndpoint: "/authorize",
-      clientRegistrationEndpoint: "/register",
-      defaultHandler: Auth0Handler as any,
-      tokenEndpoint: "/token",
-    });
-    
     return oauthProvider.fetch(request, env, ctx);
   }
 };
