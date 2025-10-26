@@ -14,6 +14,13 @@ This MCP server provides tools to interact with Puerto Rico's [MIPR (Mapa Intera
 
 This server is built using the `@alianzacap/mcp-framework`, providing consistent functionality across stdio, DXT, and Cloudflare Worker deployments.
 
+## Documentation
+
+- **[docs/AUTH0_SETUP.md](./docs/AUTH0_SETUP.md)** - Auth0 OAuth configuration and deployment
+- **[docs/MULTI_VALUE_FIELDS.md](./docs/MULTI_VALUE_FIELDS.md)** - Handling multi-value fields in JPPR data
+- **[docs/ERROR_HANDLING_IMPROVEMENTS.md](./docs/ERROR_HANDLING_IMPROVEMENTS.md)** - Error handling patterns
+- **[docs/TESTING_ANALYSIS.md](./docs/TESTING_ANALYSIS.md)** - Testing strategies and results
+
 ## Installation
 
 1. Clone or download this repository
@@ -168,46 +175,62 @@ To use this server with Claude Desktop, add the following to your `claude_deskto
 
 ## Cloudflare Worker Deployment
 
-### Automatic Deployment
-Every push to main automatically deploys via GitHub Actions.
+### Authentication: Auth0 OAuth
 
-### Manual Deployment
+The Cloudflare Worker deployment uses **Auth0 OAuth** for secure authentication. See **[docs/AUTH0_SETUP.md](./docs/AUTH0_SETUP.md)** for complete setup instructions.
+
+**Quick Overview:**
+- **Auth0 Domain**: dev-alianzacap.us.auth0.com
+- **Application**: mcp-jppr
+- **Secrets**: Managed in AWS Secrets Manager, synced to Cloudflare
+
+### Deployment
+
+**Automatic**: Every push to main deploys via GitHub Actions
+
+**Manual**:
 ```bash
+# 1. Sync secrets from AWS to Cloudflare (only needed when secrets change)
+./scripts/sync-secrets-from-aws.sh
+
+# 2. Build and deploy
 npm run build
 npx wrangler deploy
 ```
 
-### Required Configuration
-
-**GitHub Secrets** (in repository settings):
-- `CLOUDFLARE_API_TOKEN` - Cloudflare API token with Workers edit permission
-- `CLOUDFLARE_ACCOUNT_ID` - Cloudflare account ID
-- `MCP_BEARER_TOKEN` - Bearer token for MCP authentication
-- `GH_PAT` - GitHub Personal Access Token for @alianzacap packages
-
-**Local Development:**
-Set secrets in `.dev.vars` file (not committed):
-```
-MCP_BEARER_TOKEN=your-local-token
-```
-
 ### Worker URL
+
 Production: **https://mcp-jppr.alianza-capital.workers.dev**
 
 **Endpoints:**
-- `/health` - Health check (no authentication required)
-- `/mcp` - MCP protocol endpoint (requires Bearer authentication)
+- `/health` - Health check (no authentication)
+- `/mcp` - MCP protocol endpoint (requires OAuth)
+- `/authorize` - OAuth authorization endpoint
+- `/callback` - OAuth callback endpoint
+- `/register` - OAuth client registration
+- `/token` - OAuth token endpoint
 
-### Authentication
+### Using with Claude Desktop
 
-HTTP requests require Bearer token authentication:
+Configure Claude Desktop to use OAuth:
 
-```bash
-curl -H "Authorization: Bearer your-token-here" \
-     -H "Content-Type: application/json" \
-     -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp \
-     -d '{"jsonrpc": "2.0", "method": "tools/call", "params": {...}}'
+```json
+{
+  "mcpServers": {
+    "jppr": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp-jppr.alianza-capital.workers.dev/sse"
+      ]
+    }
+  }
+}
 ```
+
+Claude will open a browser for Auth0 login. Login with:
+- Email: `test@alianzacap.com`
+- Password: `TempPass123!`
 
 ## Testing
 
