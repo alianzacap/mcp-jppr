@@ -40,8 +40,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-2
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: gha-mcp-jppr-deploy
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       
       - name: Get Cloudflare credentials from AWS Secrets Manager
         id: cloudflare-creds
