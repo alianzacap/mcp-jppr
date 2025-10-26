@@ -179,7 +179,8 @@ Production: **https://mcp-jppr.alianza-capital.workers.dev**
 
 **Endpoints:**
 - `/health` - Health check (no authentication)
-- `/mcp` - MCP protocol endpoint (requires OAuth)
+- `/mcp` - MCP protocol endpoint (requires OAuth - for consumer apps)
+- `/mcp-m2m` - MCP protocol endpoint (requires JWT bearer token - for server apps)
 - `/authorize` - OAuth authorization endpoint
 - `/callback` - OAuth callback endpoint
 - `/register` - OAuth client registration
@@ -206,6 +207,38 @@ Configure Claude Desktop to use OAuth:
 Claude will open a browser for Auth0 login. Login with:
 - Email: `test@alianzacap.com`
 - Password: `TempPass123!`
+
+### Server-to-Server (M2M) Authentication
+
+For programmatic/server access, use the M2M endpoint with Auth0 Client Credentials:
+
+```bash
+# 1. Get access token from Auth0
+TOKEN=$(curl -s -X POST https://dev-alianzacap.us.auth0.com/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "YOUR_M2M_CLIENT_ID",
+    "client_secret": "YOUR_M2M_CLIENT_SECRET",
+    "audience": "urn:mcp-jppr",
+    "grant_type": "client_credentials"
+  }' | jq -r '.access_token')
+
+# 2. Call MCP endpoint
+curl -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp-m2m \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "name": "search_properties",
+      "arguments": { "query": "San Juan" }
+    },
+    "id": 1
+  }'
+```
+
+**Note**: To get M2M credentials, see [docs/AUTH0_SETUP.md](./docs/AUTH0_SETUP.md#machine-to-machine-m2m-authentication).
 
 ## Testing
 
