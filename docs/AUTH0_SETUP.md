@@ -32,8 +32,8 @@ MCP tools available
 ```json
 {
   "domain": "dev-alianzacap.us.auth0.com",
-  "client_id": "7N12nkFSXeyJpj8gQDMg8bNeFumTsLTT",
-  "client_secret": "<sensitive>",
+  "client_id": "<CLIENT_ID>",
+  "client_secret": "<CLIENT_SECRET>",
   "audience": "urn:mcp-jppr",
   "issuer": "https://dev-alianzacap.us.auth0.com/"
 }
@@ -58,8 +58,8 @@ The `.dev.vars` file is gitignored and contains local development credentials:
 ```bash
 # Auth0 configuration
 AUTH0_DOMAIN=dev-alianzacap.us.auth0.com
-AUTH0_CLIENT_ID=7N12nkFSXeyJpj8gQDMg8bNeFumTsLTT
-AUTH0_CLIENT_SECRET=0QCdZoAbpTtp9XInRQ2MgK78HdjdKs2tu7D7iWPNXBerJ8QhqnlkJ36fTdK3pQeU
+AUTH0_CLIENT_ID=<YOUR_CLIENT_ID>
+AUTH0_CLIENT_SECRET=<YOUR_CLIENT_SECRET>
 AUTH0_AUDIENCE=urn:mcp-jppr
 AUTH0_SCOPE=openid email profile offline_access read:properties search:properties
 NODE_ENV=development
@@ -289,8 +289,8 @@ curl -X POST https://mcp-jppr.alianza-capital.workers.dev/mcp-m2m \
      --secret-id alianza/auth0-mcp-jppr-client \
      --secret-string '{
        "domain": "dev-alianzacap.us.auth0.com",
-       "client_id": "7N12nkFSXeyJpj8gQDMg8bNeFumTsLTT",
-       "client_secret": "NEW_SECRET",
+       "client_id": "<CLIENT_ID>",
+       "client_secret": "<NEW_CLIENT_SECRET>",
        "audience": "urn:mcp-jppr",
        "issuer": "https://dev-alianzacap.us.auth0.com/"
      }' \
