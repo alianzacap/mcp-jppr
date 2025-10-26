@@ -356,7 +356,7 @@ All Cognito resources have been destroyed. Historical documentation is preserved
 When creating a new MCP server with Auth0, you need:
 
 **1. AWS Secrets**:
-- `alianza/cloudflare-api-token` - **Shared** (already exists, reuse for all workers)
+- `alianza/cloudflare-workers-token` - **Shared** (already exists, reuse for all workers)
 - `alianza/auth0-mcp-YOUR-SERVER-client` - **Create new** with:
   ```json
   {

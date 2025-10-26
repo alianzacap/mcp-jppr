@@ -11,14 +11,14 @@ echo ""
 # Fetch Cloudflare API token from AWS Secrets Manager
 echo "📥 Fetching Cloudflare API token from AWS..."
 export CLOUDFLARE_API_TOKEN=$(aws secretsmanager get-secret-value \
-  --secret-id alianza/cloudflare-api-token \
+  --secret-id alianza/cloudflare-workers-token \
   --region us-east-2 \
   --query 'SecretString' \
   --output text | jq -r '.api_token')
 
 if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ "$CLOUDFLARE_API_TOKEN" = "null" ]; then
   echo "❌ Error: Could not retrieve Cloudflare API token from AWS Secrets Manager"
-  echo "   Expected secret: alianza/cloudflare-api-token"
+  echo "   Expected secret: alianza/cloudflare-workers-token"
   exit 1
 fi
 
