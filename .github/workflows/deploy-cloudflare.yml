@@ -21,10 +21,23 @@ jobs:
           node-version: '20'
           cache: 'npm'
       
+      - name: Get GitHub PAT from AWS Secrets Manager
+        id: github-pat
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id alianza/github-packages-pat \
+            --region us-east-2 \
+            --query 'SecretString' \
+            --output text)
+          
+          GH_TOKEN=$(echo $SECRET | jq -r '.token')
+          echo "::add-mask::$GH_TOKEN"
+          echo "token=$GH_TOKEN" >> $GITHUB_OUTPUT
+      
       - name: Configure npm for GitHub Packages
         run: |
           echo "@alianzacap:registry=https://npm.pkg.github.com" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PAT }}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ steps.github-pat.outputs.token }}" >> .npmrc
       
       - name: Install dependencies
         run: npm ci

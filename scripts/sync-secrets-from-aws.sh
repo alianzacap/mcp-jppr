@@ -8,6 +8,27 @@ set -e
 echo "🔄 Syncing Auth0 secrets from AWS Secrets Manager to Cloudflare Workers..."
 echo ""
 
+# Fetch GitHub PAT from AWS Secrets Manager
+echo "📥 Fetching GitHub PAT from AWS Secrets Manager..."
+GH_PAT_SECRET_JSON=$(aws secretsmanager get-secret-value \
+  --secret-id alianza/github-packages-pat \
+  --region us-east-2 \
+  --query 'SecretString' \
+  --output text)
+
+GH_TOKEN=$(echo $GH_PAT_SECRET_JSON | jq -r '.token')
+export GH_TOKEN # Export for npm ci to use
+
+echo "✅ GitHub PAT retrieved from AWS"
+echo ""
+
+# Configure npm for GitHub Packages
+echo "⚙️ Configuring npm for GitHub Packages..."
+echo "@alianzacap:registry=https://npm.pkg.github.com" > .npmrc
+echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN}" >> .npmrc
+echo "✅ npm configured"
+echo ""
+
 # Fetch Cloudflare API token from AWS Secrets Manager
 echo "📥 Fetching Cloudflare API token from AWS..."
 export CLOUDFLARE_API_TOKEN=$(aws secretsmanager get-secret-value \

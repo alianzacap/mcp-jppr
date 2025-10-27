@@ -17,10 +17,11 @@
   },
   
   // KV namespace for OAuth session storage
+  // Managed by Terraform: alianza-infra/modules/cloudflare/kv_namespaces.tf
   "kv_namespaces": [
     {
       "binding": "OAUTH_KV",
-      "id": "1b17eab274d244df8aef153db187d86a"
+      "id": "6d6acb04446e4a74bfc7338e9afca7ff"
     }
   ],
   
