@@ -6,6 +6,15 @@
   // Enable Node.js core module shims required by the `agents` package
   "compatibility_flags": ["nodejs_compat"],
   
+  // Custom Domain - Cloudflare automatically creates DNS and SSL!
+  // Reference: https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+  "routes": [
+    {
+      "pattern": "mcp-jppr.alianzacap.com",
+      "custom_domain": true
+    }
+  ],
+  
   // Durable Object binding
   "durable_objects": {
     "bindings": [
