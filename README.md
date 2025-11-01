@@ -179,17 +179,38 @@ Production: **https://mcp-jppr.alianza-capital.workers.dev**
 
 **Endpoints:**
 - `/health` - Health check (no authentication)
-- `/mcp` - MCP protocol endpoint (requires OAuth - for consumer apps)
+- `/mcp` - MCP protocol endpoint with **Streamable HTTP** transport (requires OAuth - for consumer apps)
+- `/sse` - MCP protocol endpoint with **SSE** transport (legacy, requires OAuth - for consumer apps)
 - `/mcp-m2m` - MCP protocol endpoint (requires JWT bearer token - for server apps)
 - `/authorize` - OAuth authorization endpoint
 - `/callback` - OAuth callback endpoint
 - `/register` - OAuth client registration
 - `/token` - OAuth token endpoint
 
+**Transport Support:**
+- **Streamable HTTP** (modern, recommended): Use `/mcp` endpoint
+- **SSE** (legacy, stable): Use `/sse` endpoint
+
 ### Using with Claude Desktop
 
 Configure Claude Desktop to use OAuth:
 
+**Modern Streamable HTTP (recommended):**
+```json
+{
+  "mcpServers": {
+    "jppr": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp-jppr.alianza-capital.workers.dev/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Legacy SSE (if experiencing issues with streamable):**
 ```json
 {
   "mcpServers": {
