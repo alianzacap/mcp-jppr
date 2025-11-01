@@ -39,7 +39,7 @@ type Props = {
 export class JPPRMcpAgent extends McpAgent<any, Record<string, never>, Props> {
   server = new McpServer({
     name: 'mcp-jppr',
-    version: '1.1.0'
+    version: '1.2.0'
   });
 
   async init() {
@@ -75,9 +75,13 @@ app.get("/health", async (c) => {
   return c.json({
     status: 'healthy',
     service: 'mcp-jppr',
-    version: '1.1.0',
+    version: '1.2.0',
     auth: 'oauth + m2m',
-    endpoints: ['/mcp', '/mcp-m2m', '/authorize', '/callback', '/register', '/token']
+    transports: {
+      streamable_http: '/mcp',
+      sse: '/sse'
+    },
+    endpoints: ['/mcp', '/sse', '/mcp-m2m', '/authorize', '/callback', '/register', '/token']
   });
 });
 
@@ -226,6 +230,12 @@ app.get("/callback", async (c) => {
     });
 
     console.log("OAuth flow completed, redirecting to:", redirectTo);
+    console.log("OAuth callback details:", {
+      redirectTo,
+      clientId: oauthReqInfo.clientId,
+      userId: userInfo.sub,
+      email: userInfo.email
+    });
     return Response.redirect(redirectTo);
   } catch (error) {
     console.error("Callback endpoint error:", error);
@@ -256,8 +266,11 @@ const Auth0Handler = app;
 
 // OAuthProvider for OAuth endpoints
 const oauthProvider = new OAuthProvider({
-  apiHandler: JPPRMcpAgent.mount("/mcp") as any,
-  apiRoute: "/mcp",
+  // Support both modern and legacy transports
+  apiHandlers: {
+    "/mcp": JPPRMcpAgent.serve("/mcp") as any,    // Modern Streamable HTTP
+    "/sse": JPPRMcpAgent.serveSSE("/sse") as any, // Legacy SSE
+  },
   authorizeEndpoint: "/authorize",
   clientRegistrationEndpoint: "/register",
   defaultHandler: Auth0Handler as any,
@@ -269,12 +282,32 @@ export default {
   async fetch(request: Request, env: Env, ctx: any) {
     const url = new URL(request.url);
     
+    console.log("Request received:", {
+      pathname: url.pathname,
+      method: request.method,
+      headers: Object.fromEntries(request.headers.entries())
+    });
+    
     // Routes that bypass OAuth entirely
     if (url.pathname === '/mcp-m2m' || url.pathname === '/health') {
       return Auth0Handler.fetch(request, env, ctx);
     }
     
     // Everything else goes through OAuthProvider
-    return oauthProvider.fetch(request, env, ctx);
+    try {
+      const response = await oauthProvider.fetch(request, env, ctx);
+      console.log("OAuthProvider response:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      return response;
+    } catch (error) {
+      console.error("OAuthProvider fetch error:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 };
